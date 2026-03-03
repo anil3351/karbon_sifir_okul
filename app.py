@@ -19,22 +19,24 @@ from reportlab.lib.units import cm
 # -----------------------------
 # TÜRKÇE FONT KURULUMU (KÖK DİZİNDEN OKUR)
 # Streamlit Cloud / Windows / Mac hepsinde çalışır.
+# Font açılamazsa uygulama çökmesin diye "safe" şekilde kaydediyoruz.
 # -----------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 REGULAR_FONT_PATH = os.path.join(BASE_DIR, "DejaVuSans.ttf")
-BOLD_FONT_PATH = os.path.join(BASE_DIR, "DejaVuSans-Bold.ttf")
+BOLD_FONT_PATH    = os.path.join(BASE_DIR, "DejaVuSans-Bold.ttf")
 
-try:
-    if os.path.exists(REGULAR_FONT_PATH):
-        pdfmetrics.registerFont(TTFont("DejaVu", REGULAR_FONT_PATH))
-except Exception:
-    pass
+def safe_register_font(font_name: str, font_path: str) -> bool:
+    try:
+        if os.path.exists(font_path) and os.path.getsize(font_path) > 1000:
+            pdfmetrics.registerFont(TTFont(font_name, font_path))
+            return True
+        return False
+    except Exception:
+        return False
 
-try:
-    if os.path.exists(BOLD_FONT_PATH):
-        pdfmetrics.registerFont(TTFont("DejaVu-Bold", BOLD_FONT_PATH))
-except Exception:
-    pass
+HAS_REGULAR = safe_register_font("DejaVu", REGULAR_FONT_PATH)
+HAS_BOLD    = safe_register_font("DejaVu-Bold", BOLD_FONT_PATH)
 
 
 # -----------------------------
@@ -134,7 +136,6 @@ def oneriler_uret(c_komur, c_gaz, c_elek, c_su, toplam):
 
 # -----------------------------
 # 3) METRİK HESAPLAMA
-# (Sayısal araştırma kısmı)
 # -----------------------------
 def metrik_hesapla(komur_kg, gaz_m3, elek_kwh, su_m3, azaltim_orani):
     c_komur = komur_kg * K_KOMUR
@@ -218,15 +219,14 @@ def fig_olustur(rapor_baslik, met):
 
 
 # -----------------------------
-# 5) PDF ÜRETİMİ (Türkçe font gömülü + şık tasarım)
+# 5) PDF ÜRETİMİ (TTF HATASINA KARŞI GÜVENLİ)
 # -----------------------------
 def pdf_uret(okul_adi, proje_adi, met, oneriler, en_buyuk, fig, girisler):
     buffer = BytesIO()
 
-    # Font adları (yukarıda kaydedildi)
-    registered = set(pdfmetrics.getRegisteredFontNames())
-    FONT = "DejaVu" if "DejaVu" in registered else "Helvetica"
-    FONT_B = "DejaVu-Bold" if "DejaVu-Bold" in registered else FONT
+    # Font adları (yukarıda safe şekilde kaydedildi)
+    FONT   = "DejaVu" if HAS_REGULAR else "Helvetica"
+    FONT_B = "DejaVu-Bold" if HAS_BOLD else FONT
 
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
@@ -344,7 +344,6 @@ def pdf_uret(okul_adi, proje_adi, met, oneriler, en_buyuk, fig, girisler):
         for ln in lines:
             if y < 2.2*cm:
                 c.showPage()
-                # sayfa başı küçük başlık
                 c.setFont(FONT_B, 14)
                 c.setFillColor(colors.HexColor("#0F172A"))
                 c.drawString(2*cm, height-2*cm, "Öneriler (Devam)")
