@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 
 from io import BytesIO
 from datetime import datetime
+import os
 
 # PDF için
 from reportlab.lib.pagesizes import A4
@@ -13,6 +14,27 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib import colors
 from reportlab.lib.units import cm
+
+
+# -----------------------------
+# TÜRKÇE FONT KURULUMU (KÖK DİZİNDEN OKUR)
+# Streamlit Cloud / Windows / Mac hepsinde çalışır.
+# -----------------------------
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+REGULAR_FONT_PATH = os.path.join(BASE_DIR, "DejaVuSans.ttf")
+BOLD_FONT_PATH = os.path.join(BASE_DIR, "DejaVuSans-Bold.ttf")
+
+try:
+    if os.path.exists(REGULAR_FONT_PATH):
+        pdfmetrics.registerFont(TTFont("DejaVu", REGULAR_FONT_PATH))
+except Exception:
+    pass
+
+try:
+    if os.path.exists(BOLD_FONT_PATH):
+        pdfmetrics.registerFont(TTFont("DejaVu-Bold", BOLD_FONT_PATH))
+except Exception:
+    pass
 
 
 # -----------------------------
@@ -201,14 +223,10 @@ def fig_olustur(rapor_baslik, met):
 def pdf_uret(okul_adi, proje_adi, met, oneriler, en_buyuk, fig, girisler):
     buffer = BytesIO()
 
-    # Türkçe font
-    pdfmetrics.registerFont(TTFont("DejaVu", "fonts/DejaVuSans.ttf"))
-    try:
-        pdfmetrics.registerFont(TTFont("DejaVu-Bold", "fonts/DejaVuSans-Bold.ttf"))
-        FONT_B = "DejaVu-Bold"
-    except:
-        FONT_B = "DejaVu"
-    FONT = "DejaVu"
+    # Font adları (yukarıda kaydedildi)
+    registered = set(pdfmetrics.getRegisteredFontNames())
+    FONT = "DejaVu" if "DejaVu" in registered else "Helvetica"
+    FONT_B = "DejaVu-Bold" if "DejaVu-Bold" in registered else FONT
 
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
